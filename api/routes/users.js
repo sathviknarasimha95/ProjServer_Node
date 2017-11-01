@@ -10,5 +10,10 @@ module.exports = function(app) {
 
   app.route('/login')
     .post(todomysql.login);
+ 
+
+app.route('/inventory')
+    .get(todomysql.list_inventory);
+
 };
 

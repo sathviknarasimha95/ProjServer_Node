@@ -2,9 +2,9 @@ var express = require('express'),
   connection = require('express-myconnection'),
   mysql = require('mysql');
   app = express(),
-  port = process.env.PORT || 9002;
+  port = process.env.PORT || 2304;
   bodyParser = require('body-parser');
-var randtoken = require('rand-token');
+  var randtoken = require('rand-token');
   app.use(
     
     connection(mysql,{

@@ -1,0 +1,2 @@
+Wed, 01 Nov 2017 12:05:56 GMT express deprecated req.param(name): Use req.params, req.body, or req.query instead at api/controllers/cont.js:57:18
+Wed, 01 Nov 2017 12:05:56 GMT express deprecated req.param(name): Use req.params, req.body, or req.query instead at api/controllers/cont.js:58:21

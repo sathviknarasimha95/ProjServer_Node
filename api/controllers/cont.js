@@ -17,6 +17,24 @@ exports.list_all_users = function(req, res){
   
 };
 
+exports.list_inventory = function(req, res){
+  req.getConnection(function(err,connection){
+
+     connection.query('SELECT * FROM inventory',function(err,rows)     {
+
+        if(err)
+           console.log("Error Selecting : %s ",err );
+
+            res.send(rows);
+
+         });
+
+    });
+
+};
+
+
+
 exports.creat_users = function(req,res) { 
   req.getConnection(function(err,connection){
 	
@@ -57,7 +75,8 @@ exports.login = function(req,res) {
 						 	console.log(result[0].name);
 					 res.status(200).json({ status: "login_successfull",
 								token:tokens,
-								username:result[0].name});	
+								username:result[0].name,
+								role:result[0].role});	
 					}
 			});
 	});
