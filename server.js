@@ -2,7 +2,7 @@ var express = require('express'),
   connection = require('express-myconnection'),
   mysql = require('mysql');
   app = express(),
-  port = process.env.PORT || 2304;
+  port = process.env.PORT || 8080;
   bodyParser = require('body-parser');
   var randtoken = require('rand-token');
   app.use(
@@ -22,11 +22,11 @@ var express = require('express'),
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-var routes = require('./api/routes/users');
+var routes = require('./api/routes/route');
 routes(app);
 
 
 app.listen(port);
 
-console.log('todo list RESTful API server started on: ' + port);
+console.log('Sanjanaa Pharama RESTful API server started on: ' + port);
 
