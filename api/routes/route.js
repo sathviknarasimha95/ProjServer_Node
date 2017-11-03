@@ -16,5 +16,8 @@ app.route('/inventory')
 app.route('/getorders')
     .post(todomysql.get_orders);
 
+
+app.route('/getorderdetails')
+    .post(todomysql.get_order_details);
 };
 

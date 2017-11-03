@@ -37,8 +37,22 @@ exports.get_orders = function(req,res){
   req.getConnection(function(err,connection){
 		var CustomerId = req.param('CustomerId');
 		var post = {CustomerId:CustomerId};
-		var sql = "SELECT * FROM orders where CustomerId = ?";
+		var sql = "SELECT * FROM orders where CustomerId = ? ORDER By id ASC";
 		connection.query(sql,post,function(err,rows) {
+		if(err) throw err;
+		res.send(rows);
+		
+	});
+    });
+};
+
+
+exports.get_order_details = function(req,res){
+  req.getConnection(function(err,connection){
+		var OrderId = req.param('OrderId');
+		var post = {OrderId:OrderId};
+		var sql = 'SELECT orders.OrderId,orderproducts.ProductId,products.ProductName,orderproducts.UnitPrice,orders.OrderPrice,orderproducts.ProductNo FROM (((orders INNER JOIN customer ON orders.CustomerId = customer.CustomerID) JOIN orderproducts ON orders.OrderId = orderproducts.OrderId) JOIN products ON orderproducts.ProductId = products.ProductId) WHERE orders.OrderId = ? ';
+		connection.query(sql,OrderId,function(err,rows) {
 		if(err) throw err;
 		res.send(rows);
 		
@@ -57,18 +71,31 @@ exports.place_order = function(req,res) {
 	var itemNames = req.param('itemName');
 	var itemPrice = req.param('itemPrice');
 	var productId = req.param('ProductId');
+	var productNo = req.param('ProductNo');
 	console.log(OrderIds);
 	console.log(CustomerIds);
 	console.log(Dates);
 	console.log(OrderPrices);
 	console.log(itemNames);
 	console.log(productId);
+	console.log(itemPrice);
+	console.log(productNo);
+	console.log("length="+productId.length);
+	console.log("is array="+Array.isArray(productId));
 	var values = [];
-	for(var i =0;i<productId.length;i++)
+	if(Array.isArray(productId))
 	{
-		values.push([OrderIds,productId[i],itemPrice[i]]);
+		for(var i =0;i<productId.length;i++)
+		{
+		values.push([OrderIds,productId[i],itemPrice[i],productNo[i]]);
 		console.log(OrderIds,productId[i]);
+		}
 	}
+	else
+	{
+		values.push([OrderIds,productId,itemPrice,productNo]);
+	}
+	console.log(productId);
 	console.log(values);
 	var post = {id:'',OrderId:OrderIds,CustomerId:CustomerIds,Date:Dates,OrderPrice:OrderPrices};
 	//console.log(post);
@@ -77,7 +104,7 @@ exports.place_order = function(req,res) {
 				//res.send("1 row inserted");
 				//console.log("1 row inserted");
 		});
-	var sql= "INSERT INTO orderproducts(OrderId,ProductId,UnitPrice) VALUES ?";
+	var sql= "INSERT INTO orderproducts(OrderId,ProductId,UnitPrice,ProductNo) VALUES ?";
 	connection.query(sql,[values],function(err,result){
 				if(err) throw err;	
 				console.log("Number of effected rows:"+result.affectedRows);
