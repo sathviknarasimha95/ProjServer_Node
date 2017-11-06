@@ -46,6 +46,16 @@ exports.get_orders = function(req,res){
     });
 };
 
+exports.get_orders_admin = function(req,res){
+  req.getConnection(function(err,connection){
+		var sql = "SELECT customer.CustomerName,orders.OrderId,orders.Date,orders.OrderPrice,orders.OrderStatus FROM (orders JOIN customer ON orders.CustomerId = customer.CustomerID)";
+		connection.query(sql,function(err,rows){
+		if(err) throw err;
+		res.send(rows);
+		});		
+	});
+};
+
 
 exports.get_order_details = function(req,res){
   req.getConnection(function(err,connection){
@@ -97,7 +107,7 @@ exports.place_order = function(req,res) {
 	}
 	console.log(productId);
 	console.log(values);
-	var post = {id:'',OrderId:OrderIds,CustomerId:CustomerIds,Date:Dates,OrderPrice:OrderPrices};
+	var post = {id:'',OrderId:OrderIds,CustomerId:CustomerIds,Date:Dates,OrderPrice:OrderPrices,OrderStatus:'Ongoing'};
 	//console.log(post);
 	connection.query('INSERT INTO orders SET ?',post,function(err,result){
 				if(err) throw err;
@@ -110,8 +120,17 @@ exports.place_order = function(req,res) {
 				console.log("Number of effected rows:"+result.affectedRows);
 				res.status(200).json({ status: "Order_Successfull",
 						       OrderId:OrderIds});	
-		}); 
+		});
+	var firebasetoken;
+	var sqls = "SELECT FirebaseToken FROM customer WHERE CustomerId = ?";
+	connection.query(sqls,CustomerIds,function(err,result){
+			if(err) throw err;
+			firebasetoken = result[0].FirebaseToken;
+			console.log(firebasetoken);
+			sendnotification('sanjanaa pharma','Order Successfully placed',firebasetoken);
+		});
 	});
+
 };
 
 exports.login = function(req,res) { 
@@ -149,3 +168,43 @@ exports.login = function(req,res) {
 			});
 	});
 };
+
+
+function getFirebase(CustomerId,connection,err,cb)
+{
+	var firetoken;
+	console.log(CustomerId);
+	connection.query('SELECT FirebaseToken FROM customer WHERE CustomerId = ?',CustomerId,function(Err,result){
+		firetoken = result[0].FirebaseToken;
+		});
+	 cb(firetoken);
+}
+
+function sendnotification(title,body,token)
+{
+	var FCM = require('fcm-push');
+
+	var serverKey = 'AIzaSyCJlkmkuaWJh9s7iUTThOXFbGnhMfvUtGk';
+	var fcm = new FCM(serverKey);
+
+	var message = {
+    	to: token, // required fill with device token or topics
+    	collapse_key: 'new_messages', 
+    	data: {
+        	id:1
+    	},
+    	notification: {
+        	title: title,
+        	body: body
+    		}
+	};
+
+	//callback style
+	fcm.send(message, function(err, response){
+    	if (err) {
+        	console.log("Something has gone wrong!");
+    	} else {
+        	console.log("Successfully sent with response: ", response);
+ 	}
+  });
+}
