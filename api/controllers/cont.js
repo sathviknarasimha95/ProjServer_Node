@@ -33,16 +33,50 @@ exports.list_inventory = function(req, res){
 
 };
 
+exports.list_products = function(req,res){
+  req.getConnection(function(err,connection){
+		var productType = req.param('ProductType');
+		if(productType.toString() == 'All')
+		{
+			var sql = "SELECT * FROM products ORDER BY ProductName";
+			connection.query(sql,function(err,result){
+				if(err)
+					console.log("Error:%s",err);
+				res.send(result);
+			});
+		}
+		else
+		{
+			var sql = "SELECT * FROM products WHERE ProductType = ? ORDER BY ProductName";
+			connection.query(sql,productType,function(err,result){
+				if(err) throw err;
+				res.send(result);
+			});
+		}
+	});
+};
+
 exports.get_orders = function(req,res){
   req.getConnection(function(err,connection){
 		var CustomerId = req.param('CustomerId');
+		var status= req.param('OrderStatus');
 		var post = {CustomerId:CustomerId};
-		var sql = "SELECT * FROM orders where CustomerId = ? ORDER By id ASC";
-		connection.query(sql,post,function(err,rows) {
-		if(err) throw err;
-		res.send(rows);
-		
-	});
+		if(status.toString() == 'All')
+		{
+			var sql = "SELECT * FROM orders where CustomerId = ? ORDER BY Date DESC";
+			connection.query(sql,post,function(err,rows) {
+			if(err) throw err;
+			res.send(rows);
+			});
+		}
+		else
+		{
+			var sql = "SELECT * FROM orders where CustomerId = ? AND OrderStatus = ? ORDER BY Date DESC";
+                        connection.query(sql,[CustomerId,status],function(err,rows) {
+                        if(err) throw err;
+                        res.send(rows);
+                        });
+		}
     });
 };
 
@@ -56,6 +90,29 @@ exports.get_orders_admin = function(req,res){
 	});
 };
 
+exports.get_order_admin = function(req,res){
+  req.getConnection(function(err,connection){
+		var status = req.param('OrderStatus');
+		if(status.toString() == 'All')
+		{
+			var sql =" SELECT customer.CustomerName,orders.OrderId,orders.Date,orders.OrderPrice,orders.OrderStatus FROM (orders JOIN customer ON orders.CustomerId = customer.CustomerID)";
+			connection.query(sql,function(err,rows){
+                	if(err) throw err;
+                	res.send(rows);
+                	});		
+		}
+		else
+		{
+			var sql = "SELECT customer.CustomerName,orders.OrderId,orders.Date,orders.OrderPrice,orders.OrderStatus FROM (orders JOIN customer ON orders.CustomerId = customer.CustomerID) WHERE orders.OrderStatus = ?";
+			connection.query(sql,status,function(err,rows){
+			if(err) throw err;
+			res.send(rows);
+			});
+		}		
+	});
+};
+
+
 
 exports.get_order_details = function(req,res){
   req.getConnection(function(err,connection){
@@ -68,6 +125,87 @@ exports.get_order_details = function(req,res){
 		
 	});
     });
+};
+
+exports.update_order_status = function(req,res){
+  req.getConnection(function(err,connection){
+		var OrderId = req.param('OrderId');
+		var status = req.param('OrderStatus');
+		var sql = "UPDATE orders SET OrderStatus = ? WHERE OrderId = ?";
+		connection.query(sql,[status,OrderId],function(err,rows){
+		if(err) throw err;
+		res.status(200).json({ status: "Update_Successfull",
+					OrderId:OrderId});
+		});
+		var firebasetoken;
+		var email_to;
+		var sql_token = "select customer.FirebaseToken,customer.email FROM customer INNER JOIN orders ON orders.CustomerId = customer.CustomerId WHERE orders.OrderId = ?";
+		connection.query(sql_token,OrderId,function(err,rows){
+		if(err) throw err;
+		firebasetoken = rows[0].FirebaseToken;
+		email_to = rows[0].email;
+		if(status.toString() == 'Ongoing')
+		{
+			var orderstatus = "Your Order ID :"+OrderId+"Has been Accepelected";
+		}
+		else if(status.toString() == 'Completed')
+		{
+			var orderstatus = "Your Order ID:"+OrderId+"Has been Delivered";
+		}
+		else if(status.toString() == 'Cancelled')
+		{
+			var orderstatus = "Your Order ID:"+OrderId+"Has been Cancelled by Sanjanaa Pharma";
+		}
+		sendnotification('Sanjanaa Pharma',orderstatus,firebasetoken);
+	        sendmail('Order Status',email_to,orderstatus);	
+		});	
+	});
+};
+
+exports.update_firebase_token = function(req,res){
+  req.getConnection(function(err,connection){
+		var token = req.param('token');
+		var CustomerId = req.param('CustomerId');
+		var sql = "UPDATE customer SET FirebaseToken = ? WHERE CustomerId = ?";
+		connection.query(sql,[token,CustomerId],function(err,rows){
+			if(err) throw err;
+			res.status(200).json({status:"update success"});
+		});
+	});
+};
+
+function sendmail(subject,to,text){
+ 	var nodemailer = require('nodemailer');
+
+	let transporter = nodemailer.createTransport({
+  	service: 'gmail',
+  	secure: false,
+  	port: 25,
+  	auth: {
+    	user: 'sanjanaapharma@gmail.com',
+    	pass: '23061960'
+  	},
+  	tls: {
+    		rejectUnauthorized: false
+  	}
+	});
+
+	let HelperOptions = {
+  	from: '"Sanjanaa Pharma" <sanjanaapharma@gmail.com',
+  	to: to,
+ 	subject: subject,
+  	text: text
+	};
+
+
+
+  	transporter.sendMail(HelperOptions, (error, info) => {
+    	if (error) {
+      		return console.log(error);
+    	}
+    	console.log("The message was sent!");
+    	console.log(info);
+  	});
 };
 
 exports.place_order = function(req,res) { 

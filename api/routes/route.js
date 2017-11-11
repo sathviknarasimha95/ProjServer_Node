@@ -11,14 +11,22 @@ app.route('/login')
     .post(todomysql.login);
  
 app.route('/inventory')
-    .get(todomysql.list_inventory);
+    .get(todomysql.list_inventory)
+    .post(todomysql.list_products);
 
 app.route('/getorders')
     .post(todomysql.get_orders)
     .get(todomysql.get_orders_admin);
 
+app.route('/getorderadmin')
+    .post(todomysql.get_order_admin);
+
+app.route('/updatetoken')
+    .post(todomysql.update_firebase_token);
 
 app.route('/getorderdetails')
     .post(todomysql.get_order_details);
+app.route('/updateorderstatus')
+    .post(todomysql.update_order_status);
 };
 
