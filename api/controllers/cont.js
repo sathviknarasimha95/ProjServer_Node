@@ -17,6 +17,42 @@ exports.list_all_users = function(req, res){
   
 };
 
+exports.otp_gen = function(req,res){
+	var rn = require('random-number');
+	var options = {
+	  min:1000,
+	  max:9999,
+	  integer:true
+  	}
+	var rand = rn(options);
+	console.log(rand);
+	var OrderId = req.param('OrderId');
+	req.getConnection(function(err,connection){
+		var sql = "Update orders SET Otp = ? WHERE OrderId = ?";
+		connection.query(sql,[rand,OrderId],function(err,rows){
+			if(err) throw err;
+			res.status(200).json({status:"Otp Generation Successfull",
+					      OrderId:OrderId,
+					      Otp:rand});
+		});
+		var email;
+		var token;
+	req.getConnection(function(err,connection){
+		var sqls = "select customer.FirebaseToken,customer.email FROM customer INNER JOIN orders ON orders.CustomerId = customer.CustomerId WHERE orders.OrderId = ?";
+		connection.query(sqls,OrderId,function(err,rows){
+				if(err) throw err;
+				email = rows[0].email;
+				token = rows[0].FirebaseToken;
+				console.log(email);
+				console.log(token);
+				var body = "Your one time password is ="+rand;
+				sendnotification('Sanjanaa pharma',body,token);
+				sendmail('OTP',email,body);			
+			});
+		});
+	});
+};
+
 exports.list_inventory = function(req, res){
   req.getConnection(function(err,connection){
 
@@ -103,7 +139,7 @@ exports.get_order_admin = function(req,res){
 		}
 		else
 		{
-			var sql = "SELECT customer.CustomerName,orders.OrderId,orders.Date,orders.OrderPrice,orders.OrderStatus FROM (orders JOIN customer ON orders.CustomerId = customer.CustomerID) WHERE orders.OrderStatus = ?";
+			var sql = "SELECT customer.CustomerName,orders.OrderId,orders.Date,orders.OrderPrice,orders.OrderStatus,orders.PaymentStatus FROM (orders JOIN customer ON orders.CustomerId = customer.CustomerID) WHERE orders.OrderStatus = ?";
 			connection.query(sql,status,function(err,rows){
 			if(err) throw err;
 			res.send(rows);
@@ -131,12 +167,44 @@ exports.update_order_status = function(req,res){
   req.getConnection(function(err,connection){
 		var OrderId = req.param('OrderId');
 		var status = req.param('OrderStatus');
+		var paymentstatus = req.param('PaymentStatus');
+		var date = req.param('Date');
+		console.log("Date="+date);
 		var sql = "UPDATE orders SET OrderStatus = ? WHERE OrderId = ?";
 		connection.query(sql,[status,OrderId],function(err,rows){
 		if(err) throw err;
 		res.status(200).json({ status: "Update_Successfull",
 					OrderId:OrderId});
 		});
+		if(status.toString() == 'Completed')
+		{
+			if(paymentstatus == 'Unpaid')
+			{
+				var rn = require('random-number');
+				var option = { 
+					min:100,
+					max:999,
+					integer:true
+				}
+				var paymentId = rn(option);
+				console.log(paymentId);
+				console.log(OrderId);
+				var type = 'CASH';
+				console.log("Date="+date);
+				var post = {PaymentId:paymentId,PaymentType:type,PaymentDate:date};
+				var sql2 = "INSERT INTO payments SET ?";
+				connection.query(sql2,post,function(err,rows){
+					if(err) throw err;
+					console.log("payments table updated");
+				});
+				var sql1 = "UPDATE orders SET PaymentStatus = 'Paid',PaymentId = ? WHERE OrderId = ?";
+				connection.query(sql1,[paymentId,OrderId],function(err,rows){
+					if(err) throw err;
+					console.log(rows);
+				});
+			}
+			
+		}
 		var firebasetoken;
 		var email_to;
 		var sql_token = "select customer.FirebaseToken,customer.email FROM customer INNER JOIN orders ON orders.CustomerId = customer.CustomerId WHERE orders.OrderId = ?";
@@ -170,6 +238,20 @@ exports.update_firebase_token = function(req,res){
 		connection.query(sql,[token,CustomerId],function(err,rows){
 			if(err) throw err;
 			res.status(200).json({status:"update success"});
+		});
+	});
+};
+
+exports.get_payment_details = function(req,res){
+  req.getConnection(function(err,connection){
+		var CustomerId = req.param('CustomerId');
+		var status = req.param('status');
+		console.log(CustomerId);
+		console.log(status);
+		var sql = "select orders.OrderId,orders.OrderPrice,orders.Date,orders.OrderStatus,orders.PaymentStatus from orders WHERE orders.CustomerId = ? AND orders.PaymentStatus = ?";
+		connection.query(sql,[CustomerId,status],function(err,rows){
+			if(err)throw err;
+			res.send(rows);
 		});
 	});
 };

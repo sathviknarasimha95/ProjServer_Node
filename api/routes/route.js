@@ -9,6 +9,10 @@ app.route('/placeorder')
 
 app.route('/login')
     .post(todomysql.login);
+
+
+app.route('/otpgen')
+    .post(todomysql.otp_gen);
  
 app.route('/inventory')
     .get(todomysql.list_inventory)
@@ -28,5 +32,8 @@ app.route('/getorderdetails')
     .post(todomysql.get_order_details);
 app.route('/updateorderstatus')
     .post(todomysql.update_order_status);
+app.route('/getpaymentdetails')
+    .post(todomysql.get_payment_details);
+
 };
 
