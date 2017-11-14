@@ -69,6 +69,7 @@ exports.list_inventory = function(req, res){
 
 };
 
+
 exports.list_products = function(req,res){
   req.getConnection(function(err,connection){
 		var productType = req.param('ProductType');
@@ -125,7 +126,28 @@ exports.get_orders_admin = function(req,res){
 		});		
 	});
 };
-
+exports.get_payment_history = function(req,res){
+  req.getConnection(function(err,connection){
+		var CustomerId = req.param('CustomerId');
+		var type = req.param('Type');
+		if(type.toString() == 'customer')
+		{
+		var sql = "select orders.OrderId,orders.OrderPrice,orders.PaymentStatus,payments.PaymentType,payments.PaymentDate FROM(orders JOIN payments ON orders.PaymentId = payments.PaymentId)WHERE orders.CustomerId = ?";
+		connection.query(sql,CustomerId,function(err,rows){
+		if(err) throw err;
+		res.send(rows);
+		});
+		}
+		else if(type.toString() == 'all')
+		{
+			var sql1 = "select orders.OrderId,orders.OrderPrice,orders.PaymentStatus,payments.PaymentType,payments.PaymentDate FROM(orders JOIN payments ON orders.PaymentId = payments.PaymentId)";
+			connection.query(sql1,function(err,rows){
+				if(err) throw err;
+				res.send(rows);
+			});
+		}
+	});
+};
 exports.get_order_admin = function(req,res){
   req.getConnection(function(err,connection){
 		var status = req.param('OrderStatus');
@@ -242,6 +264,37 @@ exports.update_firebase_token = function(req,res){
 	});
 };
 
+exports.update_payment_info_razorpay = function(req,res){
+  req.getConnection(function(err,connection){
+				var OrderId = req.param('OrderId');
+				var date = req.param('date');
+				var TransactionId = req.param('transid');
+				var rn = require('random-number');
+                                var option = {
+                                        min:100,
+                                        max:999,
+                                        integer:true
+                                }
+                                var paymentId = rn(option);
+                                console.log(paymentId);
+                                console.log(OrderId);
+                                var type = 'CARD';
+                                console.log("Date="+date);
+                                var post = {PaymentId:paymentId,PaymentType:type,PaymentDate:date,TransactionId:TransactionId};
+                                var sql2 = "INSERT INTO payments SET ?";
+                                connection.query(sql2,post,function(err,rows){
+                                        if(err) throw err;
+                                        console.log("payments table updated");
+                                });
+                                var sql1 = "UPDATE orders SET PaymentStatus = 'Paid',PaymentId = ? WHERE OrderId = ?";
+                                connection.query(sql1,[paymentId,OrderId],function(err,rows){
+                                        if(err) throw err;
+                                        console.log(rows);
+					res.status(200).json({status:"Successfull"});	
+					
+                                });
+	});
+};
 exports.get_payment_details = function(req,res){
   req.getConnection(function(err,connection){
 		var CustomerId = req.param('CustomerId');

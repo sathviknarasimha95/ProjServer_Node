@@ -30,10 +30,17 @@ app.route('/updatetoken')
 
 app.route('/getorderdetails')
     .post(todomysql.get_order_details);
+
 app.route('/updateorderstatus')
     .post(todomysql.update_order_status);
+
 app.route('/getpaymentdetails')
     .post(todomysql.get_payment_details);
 
+app.route('/getpaymenthistory')
+    .post(todomysql.get_payment_history);
+
+app.route('/updatepaymentrazor')
+    .post(todomysql.update_payment_info_razorpay);
 };
 
