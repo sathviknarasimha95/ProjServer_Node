@@ -42,5 +42,14 @@ app.route('/getpaymenthistory')
 
 app.route('/updatepaymentrazor')
     .post(todomysql.update_payment_info_razorpay);
+
+app.route('/createusers')
+    .post(todomysql.create_users);
+
+app.route('/confirmusers')
+    .post(todomysql.confirm_user);
+
+app.route('/getpendingusers')
+    .get(todomysql.get_pending_users);
 };
 

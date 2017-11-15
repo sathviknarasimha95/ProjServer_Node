@@ -17,6 +17,74 @@ exports.list_all_users = function(req, res){
   
 };
 
+exports.get_pending_users = function(req,res){
+  req.getConnection(function(err,connection){
+		var sql = "select CustomerId,CustomerName,CustomerAdd,email,CustomerMob from customer WHERE Status = 'Pending'"
+		connection.query(sql,function(err,rows){
+			if(err) throw err;
+			res.send(rows);
+		});
+
+	});
+};
+
+exports.create_users = function(req,res){
+  req.getConnection(function(err,connection){
+		var name = req.param('name');
+		var email = req.param('email');
+		var address = req.param('address');
+		var phno = req.param('phno');
+		var dob = req.param('dob');
+		var country = 'India';
+		var state = 'karnataka';
+		var post = {CustomerId:'',CustomerName:name,CustomerDob:dob,CustomerAdd:address,email:email,password:'',CustomerState:state,CustomerCuntory:country,token:'',role:'user',FirebaseToken:'',CustomerMob:phno,Status:'Pending'};
+		var sql = "INSERT INTO customer SET ?";
+		connection.query(sql,post,function(err,rows){
+			if(err) throw err;
+			res.status(200).json({status:"Registeration success"});
+		});	
+
+	});
+};
+
+exports.confirm_user = function(req,res){
+    req.getConnection(function(err,connection){
+		var CustomerId = req.param('CustomerId');
+		var status = req.param('status');
+		var email = req.param('email');
+		if(status.toString() == 'Approved')
+		{
+			var rn = require('random-number');
+			var option = {
+					min:10000,
+					max:99999,
+					integer:true
+				     }
+			var password = rn(option);
+			req.getConnection(function(err,connection){
+				var sql = "UPDATE customer SET password = ?,Status = 'Approved' WHERE CustomerId = ?";
+				connection.query(sql,[password,CustomerId],function(err,rows){
+					if(err) throw err;
+					res.status(200).json({status:"Updation Successful"});
+					var body="Your password is "+password;
+					sendmail('Conformation',email,body);
+				});
+			}); 		
+		}
+		else if(status.toString() == 'Rejected')
+		{
+			req.getConnection(function(err,connection){
+				var sql1 = "DELETE FROM customer WHERE CustomerId = ?";
+				connection.query(sql1,CustomerId,function(err,rows){
+				if(err) throw err;
+				res.status(200).json({status:"Deletion Successful"});
+				var body = "Your Requested has been Rejected By Sanjanaa Pharma";
+				sendmail('Rejected',email,body);
+				});
+			});
+		}
+	});
+};
 exports.otp_gen = function(req,res){
 	var rn = require('random-number');
 	var options = {
@@ -379,8 +447,8 @@ exports.place_order = function(req,res) {
 		values.push([OrderIds,productId,itemPrice,productNo]);
 	}
 	console.log(productId);
-	console.log(values);
-	var post = {id:'',OrderId:OrderIds,CustomerId:CustomerIds,Date:Dates,OrderPrice:OrderPrices,OrderStatus:'Ongoing'};
+	console.log("valus="+values);
+	var post = {id:'',OrderId:OrderIds,CustomerId:CustomerIds,Date:Dates,OrderPrice:OrderPrices,OrderStatus:'Pending'};
 	//console.log(post);
 	connection.query('INSERT INTO orders SET ?',post,function(err,result){
 				if(err) throw err;
